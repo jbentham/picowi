@@ -1,0 +1,19 @@
+; PicoWi PIO program for half-duplex SPI transfers
+; See http://iosoft.blog/picowi for details
+
+.program picowi_pio
+.side_set 1
+.wrap_target
+.origin 0
+public stall:               ; Stall here when transfer complete
+    pull            side 0  ; Get byte to transmit from FIFO
+loop1:
+    nop             side 0  ; Idle with clock low
+    in pins, 1      side 0  ; Fetch next Rx bit
+    out pins, 1     side 0  ; Set next Tx bit 
+    nop             side 1  ; Idle high
+    jmp !osre loop1 side 1  ; Loop if data in shift reg
+    push            side 0  ; Save Rx byte in FIFO
+.wrap
+
+; EOF
