@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ -z $1 ]; then
+        echo "Error: no project name"
+        exit 0
+fi
+openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "adapter_khz 2000" -c "program $1.elf reset exit"
