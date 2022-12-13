@@ -22,6 +22,7 @@
 
 #define MAX_BLOCKLEN    64
 
+#pragma pack(1)
 // Union to handle 8/16/32 bit conversions
 typedef union
 {
@@ -48,6 +49,7 @@ typedef union
     uint32_t vals[2];
     uint8_t bytes[2000];
 } SPI_MSG;
+#pragma pack()
 
 int wifi_setup(void);
 int spi_init(void);

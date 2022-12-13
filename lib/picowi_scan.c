@@ -71,6 +71,7 @@ int scan_event_handler(EVENT_INFO *eip)
 {
     ESCAN_RESULT *erp=(ESCAN_RESULT *)eip->data;
     int ret = eip->chan==SDPCM_CHAN_EVT && eip->event_type==WLC_E_ESCAN_RESULT;
+    char temps[30];
     
     if (ret)
     {
@@ -81,7 +82,8 @@ int scan_event_handler(EVENT_INFO *eip)
         }
         else
         {
-            printf("%s '", mac_addr_str(erp->info.bssid));
+            mac_addr_str(temps, erp->info.bssid);
+            printf("%s '", temps);
             disp_ssid(&erp->info.ssid_len);
             printf("' chan %d\n", SWAP16(erp->info.channel));
         }

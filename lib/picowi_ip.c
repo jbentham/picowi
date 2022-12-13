@@ -31,8 +31,9 @@
 #include "picowi_ip.h"
 
 extern int display_mode;
-IPADDR my_ip;
-MACADDR my_mac, bcast_mac={0xff,0xff,0xff,0xff,0xff,0xff};
+IPADDR my_ip, bcast_ip=IPADDR_VAL(255,255,255,255);
+MACADDR bcast_mac={0xff,0xff,0xff,0xff,0xff,0xff};
+extern MACADDR my_mac;
 BYTE txbuff[TXDATA_LEN];
 
 #define NUM_ARP_ENTRIES 10
@@ -45,10 +46,7 @@ uint32_t ping_tx_time, ping_rx_time;
 //int ip_init(BYTE *ip)
 int ip_init(IPADDR addr)
 {
-    if (addr)
-        my_ip = addr;
-    else
-        my_ip = 0;
+    IP_CPY(my_ip, addr);
     return(1);
 }
 
@@ -67,7 +65,7 @@ int ip_tx_eth(BYTE *buff, int len)
 }
 
 // Add Ethernet header to buffer, return byte count
-WORD ip_add_eth(BYTE *buff, MACADDR dmac, MACADDR smac, WORD pcol)
+int ip_add_eth(BYTE *buff, MACADDR dmac, MACADDR smac, WORD pcol)
 {
     ETHERHDR *ehp = (ETHERHDR *)buff;
 
@@ -115,7 +113,7 @@ int ip_rx_arp(BYTE *data, int dlen)
 
     if (display_mode & DISP_ETH)
         ip_print_eth(data);
-    if (arp->dip == my_ip)
+    if IP_CMP(arp->dip, my_ip)
     {
         if (display_mode & DISP_ARP)
             ip_print_arp(arp);
@@ -141,8 +139,8 @@ int ip_make_arp(BYTE *buff, MACADDR mac, IPADDR addr, WORD op)
     arp->hln = MACLEN;
     arp->pln = sizeof(DWORD);
     arp->op  = htons(op);
-    arp->dip = addr;
-    arp->sip = my_ip;
+    IP_CPY(arp->dip, addr);
+    IP_CPY(arp->sip, my_ip);
     if (display_mode & DISP_ARP)
         ip_print_arp(arp);
     return(n + sizeof(ARPKT));
@@ -160,7 +158,7 @@ int ip_tx_arp(MACADDR mac, IPADDR addr, WORD op)
 void ip_save_arp(MACADDR mac, IPADDR addr)
 {
     MAC_CPY(arp_entries[arp_idx].mac, mac);
-    arp_entries[arp_idx].ipaddr = addr;
+    IP_CPY(arp_entries[arp_idx].ipaddr, addr);
     arp_idx = (arp_idx+1) % NUM_ARP_ENTRIES;
 }
 
@@ -173,7 +171,7 @@ bool ip_find_arp(IPADDR addr, MACADDR mac)
     do
     {
         i = i == 0 ? NUM_ARP_ENTRIES-1 : i-1;
-        ok = (addr == arp_entries[i].ipaddr);
+        ok = (IP_CMP(addr, arp_entries[i].ipaddr));
     } while (!ok && ++n<NUM_ARP_ENTRIES);
     if (ok)
         MAC_CPY(mac, arp_entries[i].mac);
@@ -200,10 +198,9 @@ int ip_check_frame(BYTE *data, int dlen)
     IPHDR *ip = (IPHDR *)&data[sizeof(ETHERHDR)];
 
     return (dlen >= sizeof(ETHERHDR)+sizeof(ARPKT) &&
-        (MAC_IS_BCAST(ehp->dest) ||
-         MAC_CMP(ehp->dest, my_mac)) &&
+        (MAC_IS_BCAST(ehp->dest) || MAC_CMP(ehp->dest, my_mac)) &&
         htons(ehp->ptype) == PCOL_IP &&
-        (ip->dip == BCAST_IP || ip->dip == my_ip) &&
+        (IP_IS_BCAST(ip->dip) || IP_CMP(ip->dip, my_ip) || IP_IS_ZERO(my_ip)) &&
         sizeof(ETHERHDR) + htons(ip->len) <= dlen);
 }
 
@@ -219,8 +216,8 @@ int ip_add_ip(BYTE *buff, IPADDR dip, BYTE pcol, WORD dlen)
     ip->service = 0;
     ip->ttl = 100;
     ip->pcol = pcol;
-    ip->sip = my_ip;
-    ip->dip = dip;
+    IP_CPY(ip->sip, my_ip);
+    IP_CPY(ip->dip, dip);
     ip->len = htons(dlen + sizeof(IPHDR));
     ip->check = 0;
     ip->check = 0xffff ^ add_csum(0, ip, sizeof(IPHDR));
@@ -237,7 +234,7 @@ int icmp_event_handler(EVENT_INFO *eip)
     if (eip->chan == SDPCM_CHAN_DATA &&
         ip->pcol == PICMP &&
         ip_check_frame(eip->data, eip->dlen) &&
-        ip->dip == my_ip &&
+        IP_CMP(ip->dip, my_ip) &&
         eip->dlen > sizeof(ETHERHDR)+sizeof(IPHDR)+sizeof(ICMPHDR))
     {
         return(ip_rx_icmp(eip->data, eip->dlen));
@@ -258,8 +255,8 @@ int ip_rx_icmp(BYTE *data, int dlen)
     if (icmp->type == ICREQ)
     {
         ip_add_eth(data, ehp->srce, my_mac, PCOL_IP);
-        ip->dip = ip->sip;
-        ip->sip = my_ip;
+        IP_CPY(ip->dip, ip->sip);
+        IP_CPY(ip->sip, my_ip);
         icmp->check = add_csum(icmp->check, &icmp->type, 1);
         icmp->type = ICREP;
         n = htons(ip->len);
@@ -273,7 +270,7 @@ int ip_rx_icmp(BYTE *data, int dlen)
 }
 
 // Add ICMP header to buffer, return byte count
-WORD ip_add_icmp(BYTE *buff, BYTE type, BYTE code, void *data, WORD dlen)
+int ip_add_icmp(BYTE *buff, BYTE type, BYTE code, void *data, WORD dlen)
 {
     ICMPHDR *icmp=(ICMPHDR *)buff;
     WORD len=sizeof(ICMPHDR);
@@ -289,7 +286,7 @@ WORD ip_add_icmp(BYTE *buff, BYTE type, BYTE code, void *data, WORD dlen)
 }
 
 // Add data to buffer, return length
-WORD ip_add_data(BYTE *buff, void *data, int len)
+int ip_add_data(BYTE *buff, void *data, int len)
 {
     if (len>0 && data)
         memcpy(buff, data, len);
@@ -337,11 +334,11 @@ void print_mac_addr(MACADDR mac)
     printf("%02X:%02X:%02X:%02X:%02X:%02X",
            mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
+
 // Display IP address
-void print_ip_addr(IPADDR addr)
+void print_ip_addr(IPADDR a)
 {
-    BYTE *p = (BYTE *)&addr;
-    printf("%u.%u.%u.%u", p[0],p[1],p[2],p[3]);
+    printf("%u.%u.%u.%u", a[0],a[1],a[2],a[3]);
 }
 
 // Display IP addresses in IP header
@@ -352,6 +349,13 @@ void print_ip_addrs(IPHDR *ip)
     print_ip_addr(ip->dip);
 }
 
+// Convert IP address to string
+char *ip_addr_str(char *s, IPADDR a)
+{
+    sprintf(s, "%u.%u.%u.%u", a[0],a[1],a[2],a[3]);
+    return(s);
+}
+
 // Convert byte-order in a 'short' variable
 WORD htons(WORD w)
 {
@@ -359,20 +363,10 @@ WORD htons(WORD w)
 }
 
 // Convert byte-order in a 'long' variable
-DWORD htonl(DWORD d)
+DWORD htonl(DWORD x)
 {
-    typedef union {
-        BYTE b[4];
-        DWORD d;
-    } DWB;
-    DWB x, y;
-
-    y.d = d;
-    x.b[3] = y.b[0];
-    x.b[2] = y.b[1];
-    x.b[1] = y.b[2];
-    x.b[0] = y.b[3];
-    return(x.d);
+    return((((x) & 0xff000000u) >> 24) | (((x) & 0x00ff0000u) >>  8) |
+           (((x) & 0x0000ff00u) <<  8) | (((x) & 0x000000ffu) << 24));
 }
 
 /* Calculate TCP-style checksum, add to old value */

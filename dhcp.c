@@ -1,4 +1,4 @@
-// PicoWi network join example, see http://iosoft.blog/picowi for details
+// PicoWi DHCP example, see https://iosoft.blog/picowi
 //
 // Copyright (c) 2022, Jeremy P Bentham
 //
@@ -30,46 +30,71 @@
 #include "lib/picowi_ioctl.h"
 #include "lib/picowi_event.h"
 #include "lib/picowi_join.h"
+#include "lib/picowi_ip.h"
+#include "lib/picowi_dhcp.h"
 
 // The hard-coded password is for test purposes only!!!
 #define SSID                "testnet"
 #define PASSWD              "testpass"
 #define EVENT_POLL_USEC     100000
+#define PING_RESP_USEC      200000
+#define PING_DATA_SIZE      32
 
-int main() 
+extern IPADDR my_ip, router_ip;
+extern int dhcp_complete;
+
+int main()
 {
-    uint32_t led_ticks, poll_ticks;
+    uint32_t led_ticks, poll_ticks, ping_ticks;
     bool ledon=false;
     
     add_event_handler(join_event_handler);
+    add_event_handler(arp_event_handler);
+    add_event_handler(dhcp_event_handler);
     set_display_mode(DISP_INFO);
     io_init();
-    printf("PicoWi network scan\n");
+    printf("PicoWi DHCP client\n");
     if (!wifi_setup())
         printf("Error: SPI communication\n");
     else if (!wifi_init())
         printf("Error: can't initialise WiFi\n");
     else if (!join_start(SSID, PASSWD))
         printf("Error: can't start network join\n");
+    else if (!ip_init(0))
+        printf("Error: can't start IP stack\n");
     else
     {
         // Additional diagnostic display
-        //set_display_mode(DISP_INFO|DISP_EVENT|DISP_SDPCM|DISP_REG|DISP_JOIN|DISP_DATA);
-        set_display_mode(DISP_INFO|DISP_EVENT|DISP_JOIN);
+        set_display_mode(DISP_INFO|DISP_JOIN|DISP_ARP|DISP_DHCP);
         ustimeout(&led_ticks, 0);
         ustimeout(&poll_ticks, 0);
         while (1)
         {
-            // Toggle LED at 1 Hz if joined, 5 Hz if not
-            if (ustimeout(&led_ticks, link_check() > 0 ? 500000 : 100000))
+            // Toggle LED at 0.5 Hz if joined, 5 Hz if not
+            if (ustimeout(&led_ticks, link_check() > 0 ? 1000000 : 100000))
+            {
                 wifi_set_led(ledon = !ledon);
-                
-            // Get any events, poll the joining state machine
+                ustimeout(&ping_ticks, 0);
+            }
+            // Get any events, poll the network-join state machine
             if (get_irq() || ustimeout(&poll_ticks, EVENT_POLL_USEC))
             {
                 event_poll();
                 join_state_poll(SSID, PASSWD);
                 ustimeout(&poll_ticks, 0);
+            }
+            // If link is up, poll DHCP state machine
+            if (link_check() > 0)
+                dhcp_poll();
+            // When DHCP is complete, print IP addresses
+            if (dhcp_complete == 1)
+            {
+                printf("DHCP complete, IP address ");
+                print_ip_addr(my_ip);
+                printf(" router ");
+                print_ip_addr(router_ip);
+                printf("\n");
+                dhcp_complete = 2;
             }
         }
     }

@@ -67,7 +67,7 @@ void wifi_bak_window(uint32_t addr);
 int wifi_bak_reg_write(uint32_t addr, uint32_t val, int nbytes);
 int wifi_bak_reg_read(uint32_t addr, uint32_t *valp, int nbytes);
 void wifi_set_led(bool on);
-char *mac_addr_str(uint8_t *mac);
+char *mac_addr_str(char *s, uint8_t *mac);
 void disp_bytes(int mask, uint8_t *data, int len);
 void display(int mode, const char* fmt, ...);
 void set_display_mode(int mask);

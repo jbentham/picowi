@@ -39,8 +39,10 @@
 #define PING_RESP_USEC      200000
 #define PING_DATA_SIZE      32
 
-IPADDR myip   = IPADDR_VAL(192,168,1,165);
-IPADDR hostip = IPADDR_VAL(192,168,1,1);
+// IP address of this unit (must be unique on network)
+IPADDR myip   = IPADDR_VAL(192, 168, 1, 123);
+// IP address of Access Point
+IPADDR hostip = IPADDR_VAL(192, 168, 1, 1);
 
 BYTE ping_data[PING_DATA_SIZE];
 

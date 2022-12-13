@@ -44,6 +44,7 @@ typedef struct {
     uint8_t  chans[14][2],
              ssids[1][SSID_MAXLEN];
 } SCAN_PARAMS;
+#pragma pack()
 
 int scan_start(void);
 int scan_event_handler(EVENT_INFO *eip);

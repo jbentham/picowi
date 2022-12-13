@@ -154,6 +154,8 @@ int join_event_handler(EVENT_INFO *eip)
             ret = 0;
         eip->link = news;
     }
+    else
+        ret = 0;
     return(ret);
 }
 

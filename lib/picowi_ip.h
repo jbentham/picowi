@@ -29,8 +29,9 @@ typedef unsigned int   DWORD;
 // Flags to enable IP diagnostic display
 #define DISP_ETH    0x1000
 #define DISP_ARP    0x2000
-#define DISP_IP     0x4000
-#define DISP_ICMP   0x8000
+#define DISP_ICMP   0x4000
+#define DISP_UDP    0x8000
+#define DISP_DHCP  0x10000
 
 /* MAC address */
 #define MACLEN      6           /* Ethernet (MAC) address length */
@@ -58,11 +59,21 @@ typedef struct {
 // Copy a MAC address
 #define MAC_CPY(a, b) memcpy(a, b, MACLEN)
 
-/* IP address */
+/* IP address, as an array of 4 bytes */
 #define IPLEN           4
-typedef unsigned int    IPADDR;
-#define BCAST_IP        0xffffffff
-#define IPADDR_VAL(a, b, c, d) (a | b<<8 | c<<16 | d<<24)
+typedef BYTE            IPADDR[IPLEN];
+// Initialiser for address variable
+#define IPADDR_VAL(a, b, c, d) {a, b, c, d}
+// Compare two IP addresses
+#define IP_CMP(a, b)    (a[0]==b[0] && a[1]==b[1] && a[2]==b[2] && a[3]==b[3])
+// Compare IP address to broadcast
+#define IP_IS_BCAST(a)  ((a[0] & a[1] & a[2] & a[3]) == 0xff)
+// Copy an IP address (byte-by-byte, in case it is misaligned)
+#define IP_CPY(a, b)    (a[3]=b[3], a[2]=b[2], a[1]=b[1], a[0]=b[0])
+// Set an IP address to zero
+#define IP_ZERO(a)      (a[0] = a[1] = a[2] = a[3] = 0)
+// Check if IP address is zero
+#define IP_IS_ZERO(a)   ((a[0] || a[1] || a[2] || a[3]) == 0)
 
 /* ***** ARP (Address Resolution Protocol) packet ***** */
 typedef struct
@@ -135,12 +146,32 @@ typedef struct
 #define UNREACH_PORT    3   /*                                port */
 #define UNREACH_FRAG    4   /*     fragmentation needed, but disable flag set */
 
+/* ***** UDP (User Datagram Protocol) header ***** */
+typedef struct udph
+{
+    WORD  sport,            /* Source port */
+          dport,            /* Destination port */
+          len,              /* Length of datagram + this header */
+          check;            /* Checksum of data, header + pseudoheader */
+} UDPHDR;
+
+/* ***** Pseudo-header for UDP or TCP checksum calculation ***** */
+/* The integers must be in hi-lo byte order for checksum */
+typedef struct              /* Pseudo-header... */
+{
+    IPADDR sip,             /* Source IP address */
+          dip;              /* Destination IP address */
+    BYTE  z,                /* Zero */
+          pcol;             /* Protocol byte */
+    WORD  len;              /* UDP length field */
+} PHDR;
+
 #pragma pack()
 
 int ip_init(IPADDR addr);
 void ip_set_mac(BYTE *mac);
 int ip_tx_eth(BYTE *buff, int len);
-WORD ip_add_eth(BYTE *buff, MACADDR dmac, MACADDR smac, WORD pcol);
+int ip_add_eth(BYTE *buff, MACADDR dmac, MACADDR smac, WORD pcol);
 void ip_print_eth(BYTE *buff);
 int arp_event_handler(EVENT_INFO *eip);
 int ip_rx_arp(BYTE *data, int dlen);
@@ -149,12 +180,13 @@ int ip_tx_arp(MACADDR mac, IPADDR addr, WORD op);
 void ip_save_arp(MACADDR mac, IPADDR addr);
 bool ip_find_arp(IPADDR addr, MACADDR mac);
 void ip_print_arp(ARPKT *arp);
+int ip_check_frame(BYTE *data, int dlen);
 int ip_check_ip(BYTE *data, int dlen);
 int ip_add_ip(BYTE *buff, IPADDR dip, BYTE pcol, WORD dlen);
 int icmp_event_handler(EVENT_INFO *eip);
 int ip_rx_icmp(BYTE *data, int dlen);
-WORD ip_add_icmp(BYTE *buff, BYTE type, BYTE code, void *data, WORD dlen);
-WORD ip_add_data(BYTE *buff, void *data, int len);
+int ip_add_icmp(BYTE *buff, BYTE type, BYTE code, void *data, WORD dlen);
+int ip_add_data(BYTE *buff, void *data, int len);
 int ip_make_icmp(BYTE *buff, MACADDR mac, IPADDR dip, BYTE type, BYTE code, BYTE *data, int dlen);
 int ip_tx_icmp(MACADDR mac, IPADDR dip, BYTE type, BYTE code, BYTE *data, int dlen);
 void ip_print_icmp(IPHDR *ip);
@@ -162,8 +194,11 @@ void ip_print_icmp(IPHDR *ip);
 void print_mac_addr(MACADDR mac);
 void print_ip_addr(IPADDR addr);
 void print_ip_addrs(IPHDR *ip);
+char *ip_addr_str(char *s, IPADDR addr);
 WORD htons(WORD w);
 DWORD htonl(DWORD d);
 WORD add_csum(WORD sum, void *dp, int count);
+
+void display(int mask, const char* fmt, ...);
 
 // EOF

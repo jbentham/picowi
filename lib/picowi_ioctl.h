@@ -33,6 +33,8 @@
 #define WIFI_BAND_5GHZ      1
 #define WIFI_BAND_2_4GHZ    2
   
+#pragma pack(1)
+
 // SDPCM header
 typedef struct {
     uint16_t len,       // sdpcm_header.frametag
@@ -89,6 +91,7 @@ typedef struct
         uint8_t data[IOCTL_MAX_BLKLEN];
     };
 } IOCTL_MSG;
+#pragma pack()
 
 int ioctl_set_uint32(char *name, int wait_msec, uint32_t val);
 int ioctl_set_data2(char *name, int namelen, int wait_msec, void *data, int len);

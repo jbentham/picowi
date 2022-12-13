@@ -60,7 +60,7 @@ typedef struct {
     CLM_LOAD_HDR hdr;
 } CLM_LOAD_REQ;
 
-uint8_t rxdata[2000], my_mac[6];
+uint8_t my_mac[6];
 extern const unsigned int fw_nvram_len, fw_firmware_len, fw_clm_len;
 extern const unsigned char fw_nvram_data[], fw_firmware_data[], fw_clm_data[];
 int display_mode;
@@ -77,6 +77,7 @@ uint32_t wifi_chip_id(void)
 bool wifi_init(void)
 {
     uint32_t n;
+    char temps[30];
 
     // Check Active Low Power (ALP) clock
     wifi_reg_write(SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG, SD_ALP_REQ, 1);
@@ -112,7 +113,8 @@ bool wifi_init(void)
     printf("%s\n", data);
 #endif    
     n = ioctl_get_data("cur_etheraddr", 10, my_mac, 6);
-    display(DISP_INFO, "MAC address %s\n", n ? mac_addr_str(my_mac) : "unknown");
+    mac_addr_str(temps, my_mac);
+    display(DISP_INFO, "MAC address %s\n", n ? temps : "unknown");
     return(true);
 }
 
@@ -243,14 +245,12 @@ void wifi_set_led(bool on)
 #endif       
 }
 
-// Convert MAC address to static string
-char *mac_addr_str(uint8_t *mac)
+// Convert MAC address to string
+char *mac_addr_str(char *s, uint8_t *mac)
 {
-    static char temps[20];
-    
-    sprintf(temps, "%02X:%02X:%02X:%02X:%02X:%02X", 
-            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    return(temps);
+    sprintf(s, "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+    return(s);
 }
 
 // Dump data as hex
