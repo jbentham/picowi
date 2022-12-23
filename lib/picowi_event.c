@@ -197,6 +197,7 @@ char *event_str(int event)
 int event_net_tx(void *data, int len)
 {
     TX_MSG *txp = &tx_msg;
+    uint8_t *dp = (uint8_t *)txp;
     int txlen = sizeof(SDPCM_HDR)+2+sizeof(BDC_HDR)+len;
     
     display(DISP_DATA, "Tx_DATA len %d\n", len);
@@ -209,7 +210,9 @@ int event_net_tx(void *data, int len)
     if (!wifi_reg_val_wait(10, SD_FUNC_BUS, SPI_STATUS_REG, 
             SPI_STATUS_F2_RX_READY, SPI_STATUS_F2_RX_READY, 4))
         return(0);
-    return(wifi_data_write(SD_FUNC_RAD, 0, (uint8_t *)txp, (txlen+3)&~3));
+    while (txlen & 3)
+        dp[txlen++] = 0;
+    return (wifi_data_write(SD_FUNC_RAD, 0, dp, txlen));
 }
 
 // EOF

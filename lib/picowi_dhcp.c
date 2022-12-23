@@ -29,6 +29,7 @@
 #include "picowi_ioctl.h"
 #include "picowi_event.h"
 #include "picowi_ip.h"
+#include "picowi_udp.h"
 #include "picowi_dhcp.h"
 
 int dhcp_state;                 // State variable to track DHCP progress
@@ -38,7 +39,7 @@ IPADDR subnet_mask, offered_ip; // Subnet mask & address being offered
 int dhcp_complete;              // Flag to show DHCP complete
 char *dhcp_typestrs[] = {DHCP_TYPESTRS};
 
-extern BYTE txbuff[];           // Transmit buffer
+extern BYTE txbuff[TXDATA_LEN]; // Transmit buffer
 extern int display_mode;        // Display mode
 extern MACADDR my_mac;          // My MAC address
 extern IPADDR my_ip, bcast_ip;  // My IP address, and broadcast
@@ -68,57 +69,21 @@ int dhcp_event_handler(EVENT_INFO *eip)
     if (eip->chan == SDPCM_CHAN_DATA &&
         ip->pcol == PUDP &&
         ip_check_frame(eip->data, eip->dlen) &&
-        eip->dlen > sizeof(ETHERHDR)+sizeof(IPHDR)+sizeof(UDPHDR))
+        eip->dlen > sizeof(ETHERHDR)+sizeof(IPHDR)+sizeof(UDPHDR) &&
+        udp->dport == htons(DHCP_CLIENT_PORT))
     {
         if (display_mode & DISP_UDP)
         {
             printf("Rx ");
-            ip_print_udp(eip->data, eip->dlen);
+            udp_print_hdr(eip->data, eip->dlen);
         }
-        if (udp->dport == htons(DHCP_CLIENT_PORT))
-            return(ip_rx_dhcp(eip->data, eip->dlen));
+        return(dhcp_rx(eip->data, eip->dlen));
     }
     return(0);
 }
 
-// Add UDP header to buffer, return byte count
-int ip_add_udp(BYTE *buff, WORD sport, WORD dport, void *data, int dlen)
-{
-    UDPHDR *udp=(UDPHDR *)buff;
-    IPHDR *ip=(IPHDR *)(buff-sizeof(IPHDR));
-    WORD len=sizeof(UDPHDR), check;
-    PHDR ph;
-
-    udp->sport = htons(sport);
-    udp->dport = htons(dport);
-    udp->len = htons(sizeof(UDPHDR) + dlen);
-    udp->check = 0;
-    len += ip_add_data(&buff[sizeof(UDPHDR)], data, dlen);
-    check = add_csum(0, udp, len);
-    IP_CPY(ph.sip, ip->sip);
-    IP_CPY(ph.dip, ip->dip);
-    ph.z = 0;
-    ph.pcol = PUDP;
-    ph.len = udp->len;
-    udp->check = 0xffff ^ add_csum(check, &ph, sizeof(PHDR));
-    return(len);
-}
-
-// Display UDP
-void ip_print_udp(BYTE *data, int dlen)
-{
-    IPHDR *ip = (IPHDR *)&data[sizeof(ETHERHDR)];
-    UDPHDR *udp = (UDPHDR *)&data[sizeof(ETHERHDR)+sizeof(IPHDR)];
-
-    printf("UDP ");
-    print_ip_addr(ip->sip);
-    printf(":%u->", htons(udp->sport));
-    print_ip_addr(ip->dip);
-    printf(":%u len %d\n", htons(udp->dport), dlen-sizeof(ETHERHDR)-sizeof(IPHDR)-sizeof(UDPHDR));
-}
-
 // Add DHCP header & data to buffer
-int ip_add_dhcp(BYTE *buff, BYTE opcode, void *data, int dlen)
+int dhcp_add_hdr_data(BYTE *buff, BYTE opcode, void *data, int dlen)
 {
     DHCPHDR *dhcp=(DHCPHDR *)buff;
     int len=sizeof(DHCPHDR);
@@ -128,7 +93,7 @@ int ip_add_dhcp(BYTE *buff, BYTE opcode, void *data, int dlen)
     dhcp->opcode = opcode;
     dhcp->htype = 1;
     dhcp->hlen = MACLEN;
-    dhcp->trans = htonl(trans);
+    dhcp->trans = htonl(trans++);
     MAC_CPY(dhcp->chaddr, my_mac);
     memcpy(dhcp->cookie, dhcp_cookie, sizeof(dhcp_cookie));
     len += ip_add_data(&buff[len], data, dlen);
@@ -136,19 +101,20 @@ int ip_add_dhcp(BYTE *buff, BYTE opcode, void *data, int dlen)
 }
 
 // Send an DHCP datagram
-int ip_tx_dhcp(MACADDR mac, IPADDR dip, BYTE opcode, void *data, int dlen)
+int dhcp_tx(MACADDR mac, IPADDR dip, BYTE opcode, void *data, int dlen)
 {
     int len;
     DHCPHDR *dhcp;
 
     len = ip_add_eth(txbuff, mac, my_mac, PCOL_IP);
-    dlen = ip_add_dhcp(&txbuff[len+sizeof(IPHDR)+sizeof(UDPHDR)], opcode, data, dlen);
-    len += ip_add_ip(&txbuff[len], dip, PUDP, sizeof(UDPHDR)+dlen);
-    len += ip_add_udp(&txbuff[len], DHCP_CLIENT_PORT, DHCP_SERVER_PORT, 0, dlen);
+    dlen = dhcp_add_hdr_data(&txbuff[len+sizeof(IPHDR)+sizeof(UDPHDR)], opcode, data, dlen);
+    len += ip_add_hdr(&txbuff[len], dip, PUDP, sizeof(UDPHDR)+dlen);
+    len += udp_add_hdr_data(&txbuff[len], DHCP_CLIENT_PORT, DHCP_SERVER_PORT, 0, dlen);
+    len += dlen;
     if (display_mode & DISP_UDP)
     {
         printf("Tx ");
-        ip_print_udp(txbuff, len);
+        udp_print_hdr(txbuff, len);
     }
     if (display_mode & DISP_DHCP)
     {
@@ -168,7 +134,7 @@ void dhcp_poll(void)
     {
         ustimeout(&dhcp_ticks, 0);
         IP_ZERO(my_ip);
-        ip_tx_dhcp(bcast_mac, bcast_ip, DHCP_REQUEST, 
+        dhcp_tx(bcast_mac, bcast_ip, DHCP_REQUEST, 
                    &dhcp_disco_opts, sizeof(dhcp_disco_opts));
         dhcp_state = DHCPT_DISCOVER;
     }
@@ -176,14 +142,14 @@ void dhcp_poll(void)
     {
         ustimeout(&dhcp_ticks, 0);
         IP_CPY(dhcp_req_opts.data, offered_ip);
-        ip_tx_dhcp(host_mac, bcast_ip, DHCP_REQUEST, 
+        dhcp_tx(host_mac, bcast_ip, DHCP_REQUEST, 
                    &dhcp_req_opts, sizeof(dhcp_req_opts));
         dhcp_state = DHCPT_REQUEST;
     }
 }
 
 // Receive DHCP response
-int ip_rx_dhcp(BYTE *data, int len)
+int dhcp_rx(BYTE *data, int len)
 {
     ETHERHDR *ehp=(ETHERHDR *)data;
     DHCPHDR *dhcp=(DHCPHDR *)&data[sizeof(ETHERHDR)+sizeof(IPHDR)+sizeof(UDPHDR)];

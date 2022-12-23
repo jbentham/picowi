@@ -32,6 +32,7 @@ typedef unsigned int   DWORD;
 #define DISP_ICMP   0x4000
 #define DISP_UDP    0x8000
 #define DISP_DHCP  0x10000
+#define DISP_DNS   0x20000
 
 /* MAC address */
 #define MACLEN      6           /* Ethernet (MAC) address length */
@@ -59,7 +60,7 @@ typedef struct {
 // Copy a MAC address
 #define MAC_CPY(a, b) memcpy(a, b, MACLEN)
 
-/* IP address, as an array of 4 bytes */
+/* IP address is an array of bytes, to avoid misalignment problems */
 #define IPLEN           4
 typedef BYTE            IPADDR[IPLEN];
 // Initialiser for address variable
@@ -68,8 +69,8 @@ typedef BYTE            IPADDR[IPLEN];
 #define IP_CMP(a, b)    (a[0]==b[0] && a[1]==b[1] && a[2]==b[2] && a[3]==b[3])
 // Compare IP address to broadcast
 #define IP_IS_BCAST(a)  ((a[0] & a[1] & a[2] & a[3]) == 0xff)
-// Copy an IP address (byte-by-byte, in case it is misaligned)
-#define IP_CPY(a, b)    (a[3]=b[3], a[2]=b[2], a[1]=b[1], a[0]=b[0])
+// Copy an IP address
+#define IP_CPY(a, b)    ip_cpy(a, b) // memcpy((a), (b), IPLEN)
 // Set an IP address to zero
 #define IP_ZERO(a)      (a[0] = a[1] = a[2] = a[3] = 0)
 // Check if IP address is zero
@@ -182,7 +183,7 @@ bool ip_find_arp(IPADDR addr, MACADDR mac);
 void ip_print_arp(ARPKT *arp);
 int ip_check_frame(BYTE *data, int dlen);
 int ip_check_ip(BYTE *data, int dlen);
-int ip_add_ip(BYTE *buff, IPADDR dip, BYTE pcol, WORD dlen);
+int ip_add_hdr(BYTE *buff, IPADDR dip, BYTE pcol, WORD dlen);
 int icmp_event_handler(EVENT_INFO *eip);
 int ip_rx_icmp(BYTE *data, int dlen);
 int ip_add_icmp(BYTE *buff, BYTE type, BYTE code, void *data, WORD dlen);
@@ -195,7 +196,9 @@ void print_mac_addr(MACADDR mac);
 void print_ip_addr(IPADDR addr);
 void print_ip_addrs(IPHDR *ip);
 char *ip_addr_str(char *s, IPADDR addr);
+void ip_cpy(BYTE *dest, BYTE *src);
 WORD htons(WORD w);
+WORD htonsp(BYTE *p);
 DWORD htonl(DWORD d);
 WORD add_csum(WORD sum, void *dp, int count);
 

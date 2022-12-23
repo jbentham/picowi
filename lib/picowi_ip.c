@@ -32,6 +32,7 @@
 
 extern int display_mode;
 IPADDR my_ip, bcast_ip=IPADDR_VAL(255,255,255,255);
+IPADDR zero_ip=IPADDR_VAL(0, 0, 0, 0);
 MACADDR bcast_mac={0xff,0xff,0xff,0xff,0xff,0xff};
 extern MACADDR my_mac;
 BYTE txbuff[TXDATA_LEN];
@@ -205,7 +206,7 @@ int ip_check_frame(BYTE *data, int dlen)
 }
 
 // Add IP header to buffer, return length
-int ip_add_ip(BYTE *buff, IPADDR dip, BYTE pcol, WORD dlen)
+int ip_add_hdr(BYTE *buff, IPADDR dip, BYTE pcol, WORD dlen)
 {
     static WORD ident=1;
     IPHDR *ip=(IPHDR *)buff;
@@ -298,7 +299,7 @@ int ip_make_icmp(BYTE *buff, MACADDR mac, IPADDR dip, BYTE type, BYTE code, BYTE
 {
     int n = ip_add_eth(buff, mac, my_mac, PCOL_IP);
     
-    n += ip_add_ip(&buff[n], dip, PICMP, sizeof(ICMPHDR)+dlen);
+    n += ip_add_hdr(&buff[n], dip, PICMP, sizeof(ICMPHDR)+dlen);
     n += ip_add_icmp(&buff[n], type, code, data, dlen);
     return(n);
 }
@@ -356,10 +357,26 @@ char *ip_addr_str(char *s, IPADDR a)
     return(s);
 }
 
+// Copy IP address (byte-by-byte, in case misaligned)
+void ip_cpy(BYTE *dest, BYTE *src)
+{
+    *dest++ = *src++;
+    *dest++ = *src++;
+    *dest++ = *src++;
+    *dest = *src;
+}
+
 // Convert byte-order in a 'short' variable
 WORD htons(WORD w)
 {
     return(w<<8 | w>>8);
+}
+
+// Convert byte-order in a 'short' variable, given byte pointer
+WORD htonsp(BYTE *p)
+{
+    WORD w = (WORD)(*p++) << 8;
+    return(w | *p);
 }
 
 // Convert byte-order in a 'long' variable

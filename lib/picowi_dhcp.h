@@ -88,10 +88,8 @@ typedef struct {
 #pragma pack()
 
 int dhcp_event_handler(EVENT_INFO *eip);
-int ip_add_udp(BYTE *buff, WORD sport, WORD dport, void *data, int dlen);
-void ip_print_udp(BYTE *data, int dlen);
 void dhcp_poll(void);
-int ip_rx_dhcp(BYTE *buff, int len);
+int dhcp_rx(BYTE *buff, int len);
 BYTE dhcp_msg_type(DHCPHDR *dhcp, int len);
 int dhcp_get_opt_data(DHCPHDR *dhcp, int len, BYTE opt, BYTE *data, int maxlen);
 BYTE *dhcp_get_opt(BYTE *buff, int len, BYTE opt);
