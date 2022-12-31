@@ -20,10 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
 
+#include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
 #include "lib/picowi_spi.h"
 #include "lib/picowi_init.h"
@@ -43,6 +42,7 @@
 #define PING_DATA_SIZE      32
 //#define SERVER_NAME         "pool.ntp.org"
 #define SERVER_NAME         "www.raspberrypi.org"
+#define LOCAL_PORT          1234
 
 extern IPADDR my_ip, router_ip, dns_ip, zero_ip;
 extern int dhcp_complete;
@@ -57,7 +57,7 @@ int main()
     add_event_handler(arp_event_handler);
     add_event_handler(dhcp_event_handler);
     add_event_handler(udp_event_handler);
-    udp_sock_init(udp_dns_handler, zero_ip, 0, DNS_SERVER_PORT);
+    udp_sock_init(udp_dns_handler, zero_ip, DNS_SERVER_PORT, LOCAL_PORT);
     set_display_mode(DISP_INFO);
     io_init();
     printf("PicoWi DHCP client\n");
@@ -107,7 +107,7 @@ int main()
                     ip_tx_arp(mac, router_ip, ARPREQ);
                 else
                 {
-                    dns_tx(mac, dns_ip, 1234, SERVER_NAME);
+                    dns_tx(mac, dns_ip, LOCAL_PORT, SERVER_NAME);
                 }
             }
         }

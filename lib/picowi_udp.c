@@ -20,11 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "picowi_defs.h"
 #include "picowi_pico.h"
 #include "picowi_ioctl.h"
 #include "picowi_event.h"
@@ -33,7 +32,6 @@
 
 extern int display_mode;
 
-#define NUM_UDP_SOCKETS 5
 UDP_SOCKET udp_sockets[NUM_UDP_SOCKETS];
 
 extern BYTE txbuff[TXDATA_LEN];	// Transmit buffer
@@ -47,45 +45,67 @@ int udp_event_handler(EVENT_INFO *eip)
 	IPHDR *ip = (IPHDR *)&eip->data[sizeof(ETHERHDR)];
 	UDPHDR *udp = (UDPHDR *)&eip->data[sizeof(ETHERHDR) + sizeof(IPHDR)];
 	UDP_SOCKET *usp;
+    int sock;
     
 	if (eip->chan == SDPCM_CHAN_DATA &&
 	    ip->pcol == PUDP &&
 	    ip_check_frame(eip->data, eip->dlen) &&
-	    eip->dlen > sizeof(ETHERHDR) + sizeof(IPHDR) + sizeof(UDPHDR))
+	    eip->dlen >= sizeof(ETHERHDR) + sizeof(IPHDR) + sizeof(UDPHDR))
 	{
 		if (display_mode & DISP_UDP)
 		{
 			printf("Rx ");
 			udp_print_hdr(eip->data, eip->dlen);
 		}
-		if ((usp = udp_sock_match(ip->sip, htons(udp->dport), htons(udp->sport))) != 0)
-			return (udp_sock_rx(usp, eip->data, eip->dlen));
+    	if ((sock = udp_sock_match(ip->sip, htons(udp->sport), htons(udp->dport))) >= 0)
+    	{
+        	printf("Rx SOCK %d\n", sock);
+        	usp = &udp_sockets[sock];
+        	return (udp_sock_rx(usp, eip->data, eip->dlen));
+    	}
 	}
 	return (0);
+}
+
+// Find next unused UDP socket, return index number, -ve if none
+int udp_sock_unused(void)
+{
+    for (int i=0; i<NUM_UDP_SOCKETS; i++)
+    {
+        if (udp_sockets[i].loc_port == 0 && udp_sockets[i].rem_port == 0)
+            return (i);
+    }
+    return (-1);
+}
+
+// Set parameters in a UDP socket
+void udp_sock_set(int sock, udp_handler_t handler, IPADDR remip, WORD remport, WORD locport)
+{
+    UDP_SOCKET *usp = &udp_sockets[sock];
+    
+    usp = &udp_sockets[sock];
+    IP_CPY(usp->rem_ip, remip);
+    usp->loc_port = locport;
+    usp->rem_port = remport;
+    usp->handler = handler;
 }
 
 // Initialise a UDP socket
 UDP_SOCKET *udp_sock_init(udp_handler_t handler, IPADDR remip, WORD remport, WORD locport)
 {
-	UDP_SOCKET *usp = 0;
-	int i;
-	
-	for (i = 0; i<NUM_UDP_SOCKETS; i++)
-	{
-		usp = &udp_sockets[i];
-		if (usp->locport == 0 && usp->remport == 0)
-		{
-			IP_CPY(usp->remip, remip);
-			usp->locport = locport;
-			usp->remport = remport;
-    		usp->handler = handler;
-		}
-	}
-	return (0);
+    UDP_SOCKET *usp = 0;
+    int sock = udp_sock_unused();
+    
+    if (sock >= 0)
+    {
+        usp = &udp_sockets[sock];
+        udp_sock_set(sock, handler, remip, remport, locport);
+    }
+    return (usp);
 }
 
-// Find matching socket for incoming UDP datagram
-UDP_SOCKET *udp_sock_match(IPADDR remip, WORD remport, WORD locport)
+// Find matching socket for incoming UDP datagram, return -ve if none
+int udp_sock_match(IPADDR remip, WORD remport, WORD locport)
 {
 	UDP_SOCKET *usp = 0;
 	int i;
@@ -93,25 +113,42 @@ UDP_SOCKET *udp_sock_match(IPADDR remip, WORD remport, WORD locport)
 	for (i=0; i<NUM_UDP_SOCKETS; i++)
 	{
 		usp = &udp_sockets[i];
-		if (locport == usp->locport && 
-			(IP_IS_ZERO(usp->remip) || 
-			 (IP_CMP(remip, usp->remip) && remport == usp->remport)))
-			return (usp);
+    	if (locport == usp->loc_port)
+        	return (i);
 	} 
-	return (0);
+	return (-1);
 }
 
 // Receive incoming UDP datagram
 int udp_sock_rx(UDP_SOCKET *usp, BYTE *data, int len)
 {
-	UDPHDR *udp = (UDPHDR *)&data[sizeof(ETHERHDR) + sizeof(IPHDR)];
+    ETHERHDR *ehp = (ETHERHDR *)data;
+    IPHDR *ip = (IPHDR *)&data[sizeof(ETHERHDR)];
+    UDPHDR *udp = (UDPHDR *)&data[sizeof(ETHERHDR) + sizeof(IPHDR)];
 	
-	usp->remport = udp->sport;
+    MAC_CPY(usp->rem_mac, ehp->srce);
+    IP_CPY(usp->rem_ip, ip->sip);
+	usp->rem_port = htons(udp->sport);
 	usp->data = data;
 	usp->dlen = len;
 	if (usp->handler)
-		return(usp->handler(usp));
+		return (usp->handler(usp));
 	return (0);
+}
+
+// Send a UDP datagram
+int udp_tx(MACADDR mac, IPADDR dip, WORD remport, WORD locport, void *data, int dlen)
+{
+    int len = ip_add_eth(txbuff, mac, my_mac, PCOL_IP);
+    
+    len += ip_add_hdr(&txbuff[len], dip, PUDP, sizeof(UDPHDR) + dlen);
+    len += udp_add_hdr_data(&txbuff[len], locport, remport, data, dlen);
+    if (display_mode & DISP_UDP)
+    {
+        printf("Tx ");
+        udp_print_hdr(txbuff, len+sizeof(UDPHDR));
+    }
+    return (ip_tx_eth(txbuff, len));
 }
 
 // Add UDP header to buffer, plus optional data, return byte count

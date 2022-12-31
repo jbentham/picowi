@@ -20,20 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
-// Display mask values
-#define DISP_NOTHING    0       // No display
-#define DISP_INFO       0x01    // General information
-#define DISP_SPI        0x02    // SPI transfers
-#define DISP_REG        0x04    // Register read/write
-#define DISP_SDPCM      0x08    // SDPCM transfers
-#define DISP_IOCTL      0x10    // IOCTL read/write
-#define DISP_EVENT      0x20    // Event reception
-#define DISP_DATA       0x40    // Data transfers
-#define DISP_JOIN       0x80    // Network joining
-
 // SD function numbers
 #define SD_FUNC_BUS         0
 #define SD_FUNC_BAK         1

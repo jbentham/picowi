@@ -20,19 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "picowi_defs.h"
 #include "picowi_init.h"
 #include "picowi_spi.h"
 #include "picowi_regs.h"
 #include "picowi_ioctl.h"
 #include "picowi_evtnum.h"
 #include "picowi_event.h"
-#include "picowi_scan.h"
-#include "picowi_join.h"
 
 #define MAX_HANDLERS    20
 int num_handlers;

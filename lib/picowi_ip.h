@@ -20,19 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-typedef unsigned char  BYTE;
-typedef unsigned short WORD;
-typedef unsigned int   DWORD;
-
 #pragma pack(1)
-
-// Flags to enable IP diagnostic display
-#define DISP_ETH    0x1000
-#define DISP_ARP    0x2000
-#define DISP_ICMP   0x4000
-#define DISP_UDP    0x8000
-#define DISP_DHCP  0x10000
-#define DISP_DNS   0x20000
 
 /* MAC address */
 #define MACLEN      6           /* Ethernet (MAC) address length */
@@ -128,6 +116,7 @@ typedef struct
     IPHDR  i;               /* IP header */
     BYTE   data[MAXIP];     /* Data area */
 } IPKT;
+#define IP_DATA_OFFSET (sizeof(ETHERHDR) + sizeof(IPHDR))
 
 /* ***** ICMP (Internet Control Message Protocol) header ***** */
 typedef struct
@@ -155,6 +144,7 @@ typedef struct udph
           len,              /* Length of datagram + this header */
           check;            /* Checksum of data, header + pseudoheader */
 } UDPHDR;
+#define UDP_DATA_OFFSET (sizeof(ETHERHDR) + sizeof(IPHDR) + sizeof(UDPHDR))
 
 /* ***** Pseudo-header for UDP or TCP checksum calculation ***** */
 /* The integers must be in hi-lo byte order for checksum */
@@ -201,7 +191,5 @@ WORD htons(WORD w);
 WORD htonsp(BYTE *p);
 DWORD htonl(DWORD d);
 WORD add_csum(WORD sum, void *dp, int count);
-
-void display(int mask, const char* fmt, ...);
 
 // EOF

@@ -20,18 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "picowi_defs.h"
 #include "picowi_pico.h"
 #include "picowi_spi.h"
 #include "picowi_init.h"
 #include "picowi_regs.h"
 #include "picowi_ioctl.h"
 #include "picowi_event.h"
-#include "picowi_evtnum.h"
 
 IOCTL_MSG ioctl_txmsg, ioctl_rxmsg;
 uint8_t sd_tx_seq = 1; //event_mask[EVENT_MAX / 8];

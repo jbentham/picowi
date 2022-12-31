@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
 #include "lib/picowi_spi.h"
 #include "lib/picowi_init.h"

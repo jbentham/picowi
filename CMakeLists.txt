@@ -17,7 +17,7 @@ set (PICOWI_SRCE       lib/picowi_pico.c  lib/picowi_init.c
     lib/picowi_spi.c   lib/picowi_ioctl.c lib/picowi_scan.c 
     lib/picowi_event.c lib/picowi_join.c  lib/picowi_pio.c
     lib/picowi_ip.c    lib/picowi_udp.c   lib/picowi_dhcp.c
-    lib/picowi_dns.c )
+    lib/picowi_dns.c   lib/picowi_net)
 
 # Firmware file for CYW43439 or CYW4343W
 if (${CHIP_4343W})
@@ -66,5 +66,10 @@ pico_add_extra_outputs(dhcp)
 add_executable(dns dns.c)
 target_link_libraries(dns picowi pico_stdlib hardware_pio)
 pico_add_extra_outputs(dns)
+
+# Create 'udp_socket_server' executable
+add_executable(udp_socket_server udp_socket_server.c)
+target_link_libraries(udp_socket_server picowi pico_stdlib hardware_pio)
+pico_add_extra_outputs(udp_socket_server)
 
 # EOF

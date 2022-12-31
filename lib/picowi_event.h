@@ -20,9 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#define RXDATA_LEN          1600
-#define TXDATA_LEN          1600
-
 #define EVENT_MAX           208
 #define SET_EVENT(msk, e)   msk[4 + e/8] |= 1 << (e & 7)
 
@@ -114,17 +111,6 @@ typedef struct {
     SCAN_RESULT_HDR scanh;
     BSS_INFO info;
 } ESCAN_RESULT;
-
-// Async event parameters, used internally
-typedef struct {
-    uint32_t chan;                      // From SDPCM header
-    uint32_t event_type, status, reason;// From async event (null if not event)
-    uint16_t flags;
-    uint16_t link;                      // Link state
-    uint32_t join;                      // Joining state
-    uint8_t *data;                      // Data block
-    int dlen;
-} EVENT_INFO;
 
 typedef struct
 {

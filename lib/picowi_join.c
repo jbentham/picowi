@@ -20,11 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "picowi_defs.h"
 #include "picowi_spi.h"
 #include "picowi_pico.h"
 #include "picowi_init.h"
@@ -77,6 +76,8 @@ bool join_start(char *ssid, char *passwd)
     // Enable multicast
     ioctl_set_data2("mcast_list", 11, IOCTL_WAIT, (void *)mcast_addr, sizeof(mcast_addr));
     usdelay(50000);
+    // Register SSID and password with polling function
+    join_state_poll(ssid, passwd);
     return(true);
 }
 
@@ -164,14 +165,19 @@ void join_state_poll(char *ssid, char *passwd)
 {
     EVENT_INFO *eip = &event_info;
     static uint32_t join_ticks;
+    static char *s = "", *p = "";
 
+    if (ssid)
+        s = ssid;
+    if (passwd)
+        p = passwd;
     if (eip->join == JOIN_IDLE)
     {
-        display(DISP_JOIN, "Joining network\n");
+        display(DISP_JOIN, "Joining network %s\n", s);
         eip->link = 0;
         eip->join = JOIN_JOINING;
         ustimeout(&join_ticks, 0);
-        join_restart(ssid, passwd);
+        join_restart(s, p);
     }
     else if (eip->join == JOIN_JOINING)
     {

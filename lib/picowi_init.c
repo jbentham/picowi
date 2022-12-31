@@ -20,12 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 
+#include "picowi_defs.h"
 #include "picowi_pico.h"
 #include "picowi_spi.h"
 #include "picowi_init.h"
