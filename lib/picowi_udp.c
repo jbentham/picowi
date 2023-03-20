@@ -59,7 +59,10 @@ int udp_event_handler(EVENT_INFO *eip)
 		}
     	if ((sock = udp_sock_match(ip->sip, htons(udp->sport), htons(udp->dport))) >= 0)
     	{
+		if (display_mode & DISP_UDP)
+		{
         	printf("Rx SOCK %d\n", sock);
+		}
         	usp = &udp_sockets[sock];
         	return (udp_sock_rx(usp, eip->data, eip->dlen));
     	}
