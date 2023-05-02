@@ -24,12 +24,13 @@
 
 #include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
-#include "lib/picowi_spi.h"
+#include "lib/picowi_wifi.h"
 #include "lib/picowi_init.h"
 #include "lib/picowi_ioctl.h"
 #include "lib/picowi_event.h"
 #include "lib/picowi_join.h"
 #include "lib/picowi_ip.h"
+#include "lib/picowi_net.h"
 #include "lib/picowi_udp.h"
 #include "lib/picowi_dhcp.h"
 #include "lib/picowi_dns.h"
@@ -81,7 +82,7 @@ int main()
             if (ustimeout(&led_ticks, link_check() > 0 ? 1000000 : 100000))
                 wifi_set_led(ledon = !ledon);
             // Get any events, poll the network-join state machine
-            if (get_irq() || ustimeout(&poll_ticks, EVENT_POLL_USEC))
+            if (wifi_get_irq() || ustimeout(&poll_ticks, EVENT_POLL_USEC))
             {
                 event_poll();
                 join_state_poll(SSID, PASSWD);

@@ -26,44 +26,45 @@
 #include "picowi_defs.h"
 #include "picowi_pico.h"
 #include "picowi_ip.h"
+#include "picowi_net.h"
 #include "picowi_udp.h"
 #include "picowi_dns.h"
 
-extern BYTE txbuff[TXDATA_LEN];	// Transmit buffer
-extern int display_mode;		// Display mode
-extern MACADDR my_mac;			// My MAC address
-extern IPADDR my_ip, dns_ip;	// My IP address, and DNS server
+extern BYTE txbuff[TXDATA_LEN]; // Transmit buffer
+extern int display_mode;        // Display mode
+extern MACADDR my_mac;          // My MAC address
+extern IPADDR my_ip, dns_ip;    // My IP address, and DNS server
 extern IPADDR zero_ip;
 
 // Format DNS request data, given name string
-int dns_add_hdr_data(BYTE *buff, char *s) 
+int dns_add_hdr_data(BYTE *buff, char *s)
 {
-	BYTE *p, *q;
+    BYTE *p, *q;
     DNS_HDR *dhp = (DNS_HDR *)buff;
     int len = sizeof(DNS_HDR);
     static int ident = 1;
-    
+
     memset(dhp, 0, sizeof(DNS_HDR));
     dhp->ident = htons(ident++);
     dhp->flags = htons(0x100);  // Recursion desired
     dhp->n_query = htons(1);
     p = q = &buff[len];
-	while (*s)	                // Prefix each part with length byte
-	{
-		p++;
-		while (*s && *s != '.')
-			*p++ = (BYTE)*s++;
-		*q = (BYTE)(p - q - 1);
-		q = p;
-    	if (*s)
-        	s++;
-	}
+    while (*s)                  // Prefix each part with length byte
+    {
+        p++;
+        while (*s && *s != '.')
+            *p++ = (BYTE)*s++;
+        *q = (BYTE)(p - q - 1);
+        q = p;
+        if (*s)
+            s++;
+    }
     *p++ = 0;   // Null terminator
-    *p++ = 0;	// Type A (host address)
+    *p++ = 0;   // Type A (host address)
     *p++ = 1;
-    *p++ = 0;	// Class IN
+    *p++ = 0;   // Class IN
     *p++ = 1;
-	return (p - buff);
+    return (p - buff);
 }
 
 // Transmit DNS request
@@ -71,37 +72,37 @@ int dns_tx(MACADDR mac, IPADDR dip, WORD sport, char *s)
 {
     char temps[300];
     int oset = 0;
-	int len = ip_add_eth(txbuff, mac, my_mac, PCOL_IP);
-	int dlen = dns_add_hdr_data(&txbuff[len + sizeof(IPHDR) + sizeof(UDPHDR)], s);
-	
-	len += ip_add_hdr(&txbuff[len], dip, PUDP, sizeof(UDPHDR) + dlen);
-	len += udp_add_hdr_data(&txbuff[len], sport, DNS_SERVER_PORT, 0, dlen);
+    int len = ip_add_eth(txbuff, mac, my_mac, PCOL_IP);
+    int dlen = dns_add_hdr_data(&txbuff[len + sizeof(IPHDR) + sizeof(UDPHDR)], s);
+
+    len += ip_add_hdr(&txbuff[len], dip, PUDP, sizeof(UDPHDR) + dlen);
+    len += udp_add_hdr_data(&txbuff[len], sport, DNS_SERVER_PORT, 0, dlen);
     if (display_mode & DISP_DNS)
     {
         printf("Tx %s:", dns_hdr_str(temps, txbuff, len));
         printf(" %s\n", dns_name_str(temps, txbuff, len, &oset, 0, 0));
     }
-	if (display_mode & DISP_UDP)
-	{
-		printf("Tx ");
-		udp_print_hdr(txbuff, len);
-	}
-	return (ip_tx_eth(txbuff, len));
+    if (display_mode & DISP_UDP)
+    {
+        printf("Tx ");
+        udp_print_hdr(txbuff, len);
+    }
+    return (ip_tx_eth(txbuff, len));
 }
 
 // Handler for UDP DNS response
-int udp_dns_handler(UDP_SOCKET *usp)
-{    
+int udp_dns_handler(NET_SOCKET *usp)
+{
     char temps[300];
     IPADDR addr;
     int oset = 0;
-    
+
     if (display_mode & DISP_DNS)
     {
-        printf("Rx %s: ", dns_hdr_str(temps, usp->data, usp->dlen));
-        printf("%s\n", dns_name_str(temps, usp->data, usp->dlen, &oset, 0, 0));
-        for (int n = 0; n < dns_num_resps(usp->data, usp->dlen); n++)
-            printf("%s\n", dns_name_str(temps, usp->data, usp->dlen, &oset, 0, addr));
+        printf("Rx %s: ", dns_hdr_str(temps, usp->rxdata, usp->rxlen));
+        printf("%s\n", dns_name_str(temps, usp->rxdata, usp->rxlen, &oset, 0, 0));
+        for (int n = 0; n < dns_num_resps(usp->rxdata, usp->rxlen); n++)
+            printf("%s\n", dns_name_str(temps, usp->rxdata, usp->rxlen, &oset, 0, addr));
     }
     return (1);
 }
@@ -110,7 +111,7 @@ int udp_dns_handler(UDP_SOCKET *usp)
 char *dns_hdr_str(char *s, BYTE *buff, int len)
 {
     DNS_HDR *dhp = (DNS_HDR *)&buff[sizeof(ETHERHDR) + sizeof(IPHDR) + sizeof(UDPHDR)];
-    
+
     if (len > sizeof(ETHERHDR)+sizeof(IPHDR)+sizeof(UDPHDR)+sizeof(DNS_HDR))
     {
         if (dhp->n_ans)
@@ -118,7 +119,7 @@ char *dns_hdr_str(char *s, BYTE *buff, int len)
         else
             sprintf(s, "DNS %u query", htons(dhp->n_query));
     }
-    else 
+    else
         sprintf(s, "DNS length error");
     return (s);
 }
@@ -127,12 +128,12 @@ char *dns_hdr_str(char *s, BYTE *buff, int len)
 int dns_num_resps(BYTE *buff, int len)
 {
     DNS_HDR *dhp = (DNS_HDR *)&buff[sizeof(ETHERHDR) + sizeof(IPHDR) + sizeof(UDPHDR)];
-    
+
     return (len > sizeof(ETHERHDR)+sizeof(IPHDR)+sizeof(UDPHDR)+sizeof(DNS_HDR) ?
         htons(dhp->n_ans) : 0);
 }
 
-// Convert DNS name to string, set oset to next entry, optionally get type & IP address 
+// Convert DNS name to string, set oset to next entry, optionally get type & IP address
 char *dns_name_str(char *tmps, BYTE *buff, int len, int *osetp, int *typ, IPADDR addr)
 {
     int n, i, j, ptr, type;

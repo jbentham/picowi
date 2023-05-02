@@ -66,10 +66,10 @@ typedef struct {
 
 // Scan result header (part of wl_escan_result_t)
 typedef struct {
-	uint32_t buflen;
-	uint32_t version;
-	uint16_t sync_id;
-	uint16_t bss_count;
+    uint32_t buflen;
+    uint32_t version;
+    uint16_t sync_id;
+    uint16_t bss_count;
 } SCAN_RESULT_HDR;
 
 // BSS info from EScan (part of wl_bss_info_t)
@@ -126,6 +126,7 @@ typedef int (*event_handler_t)(EVENT_INFO *eip);
 
 int events_enable(const EVT_STR *evtp);
 bool add_event_handler(event_handler_t);
+bool add_server_event_handler(event_handler_t fn, WORD port);
 int event_handle(EVENT_INFO *eip);
 int event_poll(void);
 int event_read(IOCTL_MSG *rsp, void *data, int dlen);

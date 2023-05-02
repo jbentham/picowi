@@ -24,11 +24,11 @@
                                     // (boosts SPI from 2 to 5.4 MHz read, 7.8 MHz write)
 #define SD_CLK_DELAY    0           // Clock on/off delay time in usec
 #define USE_PIO         1           // Set non-zero to use Pico PIO for SPI
-#define PIO_SPI_FREQ    8000000     // SPI frequency if using PIO
+#define USE_PIO_DMA     1           // Set non-zero to use PIO DMA
+#define PIO_SPI_FREQ    40000000    // SPI frequency if using PIO
 #define SD_IRQ_ASSERT   1           // State of IRQ pin when asserted
 
-// Definition in CMakeLists to switch between CY4343W and CYW43439
-//#define CHIP_4343W    0
+// Use definition in CMakeLists to switch between CY4343W and CYW43439
 
 #if CHIP_4343W == 1
 // Pico Murata 1DX CYW4343W add-on module pinout
@@ -102,6 +102,8 @@ void io_init(void);
 void io_set(int pin, int mode, int pull);
 void io_mode(int pin, int mode);
 void io_pull(int pin, int pull);
+void io_strength(int pin, uint32_t strength);
+void io_slew(int pin, uint32_t slew);
 void io_out(int pin, int val);
 extern uint8_t io_in(int pin);
 uint32_t ustime(void);

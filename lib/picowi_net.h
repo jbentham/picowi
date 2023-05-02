@@ -30,12 +30,32 @@ extern int dhcp_complete;
 
 #define SOCK_STREAM     1
 #define SOCK_DGRAM      2
-#define SOCK_RAW        3
+
+#define NUM_NET_SOCKETS 5
+
+typedef int(*web_handler_t)(int sock, char *req, int oset);
+
+#pragma pack(1)
+struct net_socket_t
+{
+    WORD rem_port, loc_port;
+    IPADDR rem_ip;
+    MACADDR rem_mac;
+    BYTE padding[2];
+    BYTE *rxdata;
+    int rxlen, rxdlen, txdlen, tries, close, errors;
+    uint32_t ticks, timeout;
+    int sock_type, state;
+    DWORD seq, ack, rx_seq, rx_ack, start_seq, last_rx_ack;
+    int(*sock_handler)(struct net_socket_t *usp);
+    web_handler_t web_handler;
+    BYTE txbuff[MAXFRAME];
+};
+typedef struct net_socket_t NET_SOCKET;
+typedef int(*net_handler_t)(struct net_socket_t *usp);
 
 typedef uint32_t in_addr_t;
 typedef int socklen_t;
-extern IPADDR zero_ip;
-extern UDP_SOCKET udp_sockets[NUM_UDP_SOCKETS];
 
 struct in_addr {
     in_addr_t s_addr;
@@ -54,15 +74,20 @@ struct sockaddr {
     uint8_t        sa_family;
     char           sa_data[14];
 };
+#pragma pack()
 
 int net_init(void);
 int net_join(char *ssid, char *passwd);
-void net_poll(void);
+int net_event_poll(void);
+void net_state_poll(void);
 int setsockopt(int sock, int level, int optname, void *optval, socklen_t optlen);
 char *inet_ntoa(struct in_addr  addr);
 int socket(int domain, int type, int protocol);
 int bind(int sock, struct sockaddr *addr, socklen_t addrlen);
+int listen(int sock, int backlog);
+int accept(int server_sock, struct sockaddr *addr, socklen_t *addrlen);
 int recvfrom(int sock, void *mem, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
 int sendto(int sock, void *data, size_t size, int flags, struct sockaddr *to, socklen_t tolen);
+NET_SOCKET *net_socket_ptr(int sock);
 
 // EOF

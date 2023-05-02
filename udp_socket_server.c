@@ -26,7 +26,6 @@
 #include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
 #include "lib/picowi_ip.h"
-#include "lib/picowi_udp.h"
 #include "lib/picowi_net.h"
 
 // The hard-coded password is for test purposes only!!!
@@ -52,7 +51,7 @@ int main()
     {
         server_sock = socket(AF_INET, SOCK_DGRAM, 0);
         memset(&server_addr, 0, sizeof(server_addr)); 
-        server_addr.sin_family    = AF_INET;
+        server_addr.sin_family = AF_INET;
         server_addr.sin_addr.s_addr = INADDR_ANY; 
         server_addr.sin_port = htons(PORTNUM);         
         if (server_sock >= 0 &&

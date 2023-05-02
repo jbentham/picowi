@@ -24,7 +24,7 @@
 
 #include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
-#include "lib/picowi_spi.h"
+#include "lib/picowi_wifi.h"
 #include "lib/picowi_init.h"
 #include "lib/picowi_ioctl.h"
 #include "lib/picowi_event.h"
@@ -60,7 +60,7 @@ int main()
                 wifi_set_led(ledon = !ledon);
                 
             // Get any events
-            if (get_irq() || ustimeout(&poll_ticks, 10000))
+            if (wifi_get_irq() || ustimeout(&poll_ticks, 10000))
             {
                 if (event_poll() < 0)
                     printf("Total time %lu msec\n", ustime()/1000);

@@ -20,23 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#define DNS_SERVER_PORT	53
+#define DNS_SERVER_PORT 53
 
 #pragma pack(1)
 typedef struct
 {
-	WORD ident,
+    WORD ident,
         flags,
-	    n_query,
-		n_ans,
-		n_auth,
-		n_rr;
+        n_query,
+        n_ans,
+        n_auth,
+        n_rr;
 } DNS_HDR;
 #pragma pack()
 
 int dns_add_data(BYTE *buff, char *s);
 int dns_tx(MACADDR mac, IPADDR dip, WORD sport, char *s);
-int udp_dns_handler(UDP_SOCKET *usp);
+int udp_dns_handler(NET_SOCKET *usp);
 char *dns_hdr_str(char *s, BYTE *buff, int len);
 char *dns_name_str(char *tmps, BYTE *buff, int len, int *osetp, int *typ, IPADDR addr);
 int dns_num_resps(BYTE *buff, int len);

@@ -24,7 +24,7 @@
 
 #include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
-#include "lib/picowi_spi.h"
+#include "lib/picowi_wifi.h"
 #include "lib/picowi_init.h"
 
 int main() 

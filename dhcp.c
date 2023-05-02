@@ -26,7 +26,7 @@
 
 #include "lib/picowi_defs.h"
 #include "lib/picowi_pico.h"
-#include "lib/picowi_spi.h"
+#include "lib/picowi_wifi.h"
 #include "lib/picowi_init.h"
 #include "lib/picowi_ioctl.h"
 #include "lib/picowi_event.h"
@@ -78,7 +78,7 @@ int main()
                 ustimeout(&ping_ticks, 0);
             }
             // Get any events, poll the network-join state machine
-            if (get_irq() || ustimeout(&poll_ticks, EVENT_POLL_USEC))
+            if (wifi_get_irq() || ustimeout(&poll_ticks, EVENT_POLL_USEC))
             {
                 event_poll();
                 join_state_poll(SSID, PASSWD);

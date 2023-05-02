@@ -20,31 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#define NUM_UDP_SOCKETS 5
-
-#pragma pack(1)
-struct udp_socket_t
-{
-	WORD rem_port, loc_port;
-	IPADDR rem_ip;
-    MACADDR rem_mac;
-	BYTE *data;
-	int dlen;
-    DWORD ticks, timeout;
-    int(*handler)(struct udp_socket_t *usp);
-};
-typedef struct udp_socket_t UDP_SOCKET;
-typedef int(*udp_handler_t)(struct udp_socket_t *usp);
-
-#pragma pack()
-
 int udp_event_handler(EVENT_INFO *eip);
 int udp_sock_unused(void);
-void udp_sock_set(int sock, udp_handler_t handler, IPADDR remip, WORD remport, WORD locport);
-UDP_SOCKET *udp_sock_init(udp_handler_t handler, IPADDR remip, WORD remport, WORD locport);
+void udp_sock_set(int sock, net_handler_t handler, IPADDR remip, WORD remport, WORD locport);
+NET_SOCKET *udp_sock_init(net_handler_t handler, IPADDR remip, WORD remport, WORD locport);
 int dns_add_hdr_data(BYTE *buff, char *s);
 int udp_sock_match(IPADDR remip, WORD locport, WORD remport);
-int udp_sock_rx(UDP_SOCKET *usp, BYTE *data, int len);
+int udp_sock_rx(NET_SOCKET *usp, BYTE *data, int len);
 int udp_tx(MACADDR mac, IPADDR dip, WORD remport, WORD locport, void *data, int dlen);
 int udp_add_hdr_data(BYTE *buff, WORD sport, WORD dport, void *data, int dlen);
 void udp_print_hdr(BYTE *data, int dlen);

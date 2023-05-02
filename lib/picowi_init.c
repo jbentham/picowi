@@ -26,7 +26,7 @@
 
 #include "picowi_defs.h"
 #include "picowi_pico.h"
-#include "picowi_spi.h"
+#include "picowi_wifi.h"
 #include "picowi_init.h"
 #include "picowi_ioctl.h"
 #include "picowi_event.h"
@@ -48,10 +48,10 @@
 #define MAX_LOAD_LEN        512
 
 typedef struct {
-	uint16_t flag;
-	uint16_t type;
-	uint32_t len;
-	uint32_t crc;
+    uint16_t flag;
+    uint16_t type;
+    uint32_t len;
+    uint32_t crc;
 } CLM_LOAD_HDR;
 
 typedef struct {
@@ -80,7 +80,7 @@ bool wifi_init(void)
 
     // Check Active Low Power (ALP) clock
     wifi_reg_write(SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG, SD_ALP_REQ, 1);
-    if (!wifi_reg_val_wait(10, SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG, 
+    if (!wifi_reg_val_wait(10, SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG,
                            SD_ALP_AVAIL, SD_ALP_AVAIL, 1))
         return(false);
     wifi_reg_write(SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG, 0x00, 1);
@@ -98,7 +98,7 @@ bool wifi_init(void)
     wifi_reg_write(SD_FUNC_BAK, SB_32BIT_WIN | (SB_32BIT_WIN-4), n, 4);
     // Reset, and wait for High Throughput (HT) clock ready
     wifi_core_reset(false);
-    if (!wifi_reg_val_wait(50, SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG, 
+    if (!wifi_reg_val_wait(50, SD_FUNC_BAK, BAK_CHIP_CLOCK_CSR_REG,
                               SD_HT_AVAIL, SD_HT_AVAIL, 1))
         return(false);
     // Wait for backplane ready
@@ -106,11 +106,11 @@ bool wifi_init(void)
         return(false);
     // Load CLM
     wifi_clm_load(fw_clm_data, fw_clm_len);
-#if DISPLAY_CLMVER    
+#if DISPLAY_CLMVER
     uint8_t data[300];
     ioctl_get_data("clmver", 30, data, sizeof(data)-1);
     printf("%s\n", data);
-#endif    
+#endif
     n = ioctl_get_data("cur_etheraddr", 10, my_mac, 6);
     mac_addr_str(temps, my_mac);
     display(DISP_INFO, "MAC address %s\n", n ? temps : "unknown");
@@ -121,7 +121,7 @@ bool wifi_init(void)
 bool wifi_core_reset(bool ram)
 {
     uint32_t val, base=ram ? RAM_CORE_ADDR : ARM_CORE_ADDR;
-    
+
     wifi_bak_reg_read(base+AI_IOCTRL_OSET, &val, 1);
     wifi_bak_reg_write(base+AI_IOCTRL_OSET, 0x03, 1);
     wifi_bak_reg_read(base+AI_IOCTRL_OSET, &val, 1);
@@ -141,7 +141,7 @@ void init_powersave(void)
     ioctl_set_uint32("bcn_li_dtim", 10, 0x01);
     ioctl_set_uint32("assoc_listen", 10, 0x0a);
     ioctl_wr_int32(WLC_SET_PM, 10, 0x02);
-    //ioctl_wr_int32(WLC_SET_GMODE, 10, 0x01); 
+    //ioctl_wr_int32(WLC_SET_GMODE, 10, 0x01);
     //ioctl_wr_int32(WLC_SET_BAND, 10, 0x00);
 }
 
@@ -150,7 +150,7 @@ int wifi_data_load(int func, uint32_t dest, const unsigned char *data, int len)
 {
     int nbytes=0, n;
     uint32_t oset=0;
-    
+
     wifi_bak_window(dest);
     dest &= SB_ADDR_MASK;
     while (nbytes < len)
@@ -173,7 +173,7 @@ int wifi_clm_load(const unsigned char *data, int len)
 {
     int nbytes=0, oset=0, n;
     CLM_LOAD_REQ clr = {.req="clmload", .hdr={.type=2, .crc=0}};
-    
+
     while (nbytes < len)
     {
         n = MIN(MAX_LOAD_LEN, len-nbytes);
@@ -190,7 +190,7 @@ int wifi_clm_load(const unsigned char *data, int len)
 bool wifi_reg_val_wait(int ms, int func, int addr, uint32_t mask, uint32_t val, int nbytes)
 {
     bool ok;
-    
+
     while (!(ok=wifi_reg_read_check(func, addr, mask, val, nbytes)) && ms--)
         usdelay(1000);
     return(ok);
@@ -239,9 +239,9 @@ void wifi_set_led(bool on)
         wifi_bak_reg_write(BAK_GPIOOUTEN_REG, 1<<SD_LED_GPIO, 4);
     init = true;
     wifi_bak_reg_write(BAK_GPIOOUT_REG, on ? 1<<SD_LED_GPIO : 0, 4);
-#else    
+#else
     ioctl_set_intx2("gpioout", 10, 1<<SD_LED_GPIO, on ? 1<<SD_LED_GPIO : 0);
-#endif       
+#endif
 }
 
 // Convert MAC address to string

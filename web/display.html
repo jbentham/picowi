@@ -1,0 +1,169 @@
+<html><!DOCTYPE html><html lang="en">
+<!-- Simple logic analyser display
+     v0.08 JPB 1/5/23   Simplified code for Picowi project
+-->
+<head><meta charset="utf-8"/>
+  <script type="text/javascript" language="javascript"> "use strict";
+
+    const remip = "192.168.1.240", bin_mode = true;
+    const statusfile = 'http://' + remip + '/status.txt';
+    if (bin_mode)
+      var datafile = 'http://' + remip + '/data.bin';
+    else
+      var datafile = 'http://' + remip + '/data.txt';
+
+    const grid_bg="#d8e8d8", grid_fg="#40f040", label_font="14px Arial";
+    var ctx1, xdivisions=10, ydivisions=16, winxpad=25, winypad=50;
+    var unitStatus, nchans = 16, startime;
+
+    // Handle event: application loaded
+    window.addEventListener("load", function() {
+      ctx1 = document.getElementById("canvas1").getContext("2d");
+      resize();
+      window.addEventListener('resize', resize, false);
+      drawGrid(ctx1);
+      getStatus();
+    } );
+
+    // Get unit status
+    function getStatus() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          unitStatus = JSON.parse(xhttp.responseText);
+          dispStatus();
+          getData();
+        }
+      };
+      xhttp.open( "GET", statusfile);
+      xhttp.send();
+    }
+
+    function dispStatus() {
+      if (unitStatus == null) {
+        showStatus("No status data from " + remip);
+      }
+      else {
+        var a = [ ];
+        for (let key in unitStatus)
+          a.push(key + ":" + unitStatus[key]);
+        var stat = remip + " " + a.join(', ');
+        document.getElementById("statusText").innerHTML = stat;
+      }
+    }
+
+    // Show status text below graphic
+    function showStatus(s) {
+      var stat = document.getElementById("statusText");
+      stat.innerHTML = s;
+    }
+
+    // Get display data
+    function getData() {
+      var req = new XMLHttpRequest();
+      req.addEventListener( "load", dispData);
+      req.open( "GET", datafile);
+      if (bin_mode)
+          req.responseType = "arraybuffer";
+      startime = window.performance.now();
+      req.send();
+    }
+
+    // Display the data
+    function dispData(e) {
+      if (bin_mode) {
+        var resp = e.target.response;
+        //console.log("Response length " + resp.prototype.byteLength);
+        var d = new Uint16Array(resp), n = d.byteLength;
+        var dt = window.performance.now() - startime;
+        var rate = n / dt;
+        console.log("Received " + n + " bytes in " + dt.toFixed(1) + " msec, " +
+                    rate.toFixed(0) + " kbyte/s");
+      }
+      else {
+        var resp = e.target.responseText.replaceAll("\n", "");
+        var d = strbin16(atob(resp));
+      }
+      drawLogic(ctx1, d);
+    }
+
+    // Convert string of 16-bit values to binary array
+    function strbin16(s) {
+      var vals = [];
+      for (var n=0; n<s.length;) {
+        var v = s.charCodeAt(n++);
+        vals.push(v | (s.charCodeAt(n++) << 8));
+      }
+      return vals;
+    }
+
+    // Draw grid in display area
+    function drawGrid(ctx) {
+      var w=ctx.canvas.clientWidth, h=ctx.canvas.clientHeight;
+      var dw = w/xdivisions, dh=h/ydivisions;
+      ctx.fillStyle = grid_bg;
+      ctx.fillRect(0, 0, w, h);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = grid_fg;
+      ctx.strokeRect(0, 1, w-1, h-1);
+      ctx.beginPath();
+      for (var n=0; n<xdivisions; n++) {
+        var x = n*dw;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.fillStyle = 'blue';
+      }
+      for (var n=0; n<ydivisions; n++) {
+        var y = n*dh;
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+    }
+
+    // Draw logic traces
+    function drawLogic(ctx, data) {
+      for (var bit=0; bit<nchans; bit++) {
+        drawLogicLine(ctx, bit, data);
+      }
+    }
+
+    // Draw a digital trace
+    function drawLogicLine(ctx, bit, data) {
+      var w=ctx.canvas.clientWidth, h=ctx.canvas.clientHeight;
+      var y0 = (bit + 1) * h/nchans - 2, y1 = y0 - 0.8*h/nchans;
+      if (data) {
+        var dx = w / data.length, msk=1<<bit, lastval=0;
+        var nmax=data.length;
+        ctx.beginPath();
+        var val = data[0] & msk;
+        lastval = val;
+        ctx.moveTo(0, val ? y1 : y0);
+        for (var n=1; n<nmax; n++) {
+          val = data[n] & msk;
+          if (lastval != val) {
+            ctx.lineTo(n*dx, lastval ? y1 : y0);
+            ctx.lineTo(n*dx, val ? y1 : y0);
+            lastval = val;
+          }
+        }
+        ctx.lineTo(n*dx, val ? y1 : y0);
+        ctx.strokeStyle = "red";
+        ctx.stroke();
+      }
+    }
+
+    // Respond to window being resized
+    function resize() {
+      ctx1.canvas.width = window.innerWidth - winxpad;
+      ctx1.canvas.height = window.innerHeight - winypad;
+      drawGrid(ctx1);
+      dispStatus();
+    }
+
+  </script><style>
+  </style></head><body>
+  <canvas id="canvas1"></canvas>
+  <pre id="statusText"></pre>
+</body></html>
+

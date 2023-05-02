@@ -25,23 +25,23 @@
 #define DHCP_CLIENT_PORT 68 /* Client & server port numbers */
 #define DHCP_SERVER_PORT 67
 
-#define DHCP_REQUEST		1
-#define DHCP_REPLY			2
+#define DHCP_REQUEST        1
+#define DHCP_REPLY          2
 
-#define DHCP_OPT_PAD	    0
-#define DHCP_OPT_SUBNET		1
-#define DHCP_OPT_ROUTER		3
-#define DHCP_OPT_DNS		6
-#define	DHCP_OPT_REQIP		50
-#define DHCP_OPT_LEASE		51
-#define DHCP_OPT_MSGTYPE	53
-#define DHCP_OPT_SERVERID	54
-#define DHCP_OPT_LIST		55
-#define DHCP_OPT_T1			58
-#define DHCP_OPT_T2			59
-#define	DHCP_OPT_END		255
+#define DHCP_OPT_PAD        0
+#define DHCP_OPT_SUBNET     1
+#define DHCP_OPT_ROUTER     3
+#define DHCP_OPT_DNS        6
+#define DHCP_OPT_REQIP      50
+#define DHCP_OPT_LEASE      51
+#define DHCP_OPT_MSGTYPE    53
+#define DHCP_OPT_SERVERID   54
+#define DHCP_OPT_LIST       55
+#define DHCP_OPT_T1         58
+#define DHCP_OPT_T2         59
+#define DHCP_OPT_END        255
 
-#define DHCP_COOKIE_LEN 	4
+#define DHCP_COOKIE_LEN     4
 #define DHCP_TIMEOUT        2000000
 
 #pragma pack(1)
@@ -55,34 +55,34 @@ typedef struct {
 
 /* Option code 53 */
 typedef enum {
-	DHCPT_DISCOVER 	= 	1,
-	DHCPT_OFFER		=	2,
-	DHCPT_REQUEST	=	3,
-	DHCPT_DECLINE	= 	4,
-	DHCPT_ACK		=	5,
-	DHCPT_NAK		=	6,
-	DHCPT_RELEASE	=	7,
-	DHCPT_INFORM	=	8
+    DHCPT_DISCOVER  =   1,
+    DHCPT_OFFER     =   2,
+    DHCPT_REQUEST   =   3,
+    DHCPT_DECLINE   =   4,
+    DHCPT_ACK       =   5,
+    DHCPT_NAK       =   6,
+    DHCPT_RELEASE   =   7,
+    DHCPT_INFORM    =   8
 } DHCP_TYPE;
 
 #define DHCP_TYPESTRS "DISCOVER","OFFER","REQUEST","DECLINE","ACK","NAK","RELEASE","INFORM"
 
 typedef struct {
-  	BYTE  opcode;   			/* Message opcode/type. */
-	BYTE  htype;				/* Hardware addr type (net/if_types.h). */
-	BYTE  hlen;					/* Hardware addr length. */
-	BYTE  hops;					/* Number of relay agent hops from client. */
-	DWORD trans;				/* Transaction ID. */
-	WORD secs;					/* Seconds since client started looking. */
-	WORD flags;					/* Flag bits. */
-	IPADDR ciaddr,				/* Client IP address (if already in use). */
-           yiaddr,				/* Client IP address. */
-           siaddr,				/* Server IP address */
-           giaddr;				/* Relay agent IP address. */
-	BYTE chaddr [16];		    /* Client hardware address. */
-	char sname[SNAME_LEN];	    /* Server name. */
-	char bname[BOOTF_LEN];		/* Boot filename. */
-	BYTE cookie[DHCP_COOKIE_LEN];   /* Magic cookie */
+    BYTE  opcode;               /* Message opcode/type. */
+    BYTE  htype;                /* Hardware addr type (net/if_types.h). */
+    BYTE  hlen;                 /* Hardware addr length. */
+    BYTE  hops;                 /* Number of relay agent hops from client. */
+    DWORD trans;                /* Transaction ID. */
+    WORD secs;                  /* Seconds since client started looking. */
+    WORD flags;                 /* Flag bits. */
+    IPADDR ciaddr,              /* Client IP address (if already in use). */
+           yiaddr,              /* Client IP address. */
+           siaddr,              /* Server IP address */
+           giaddr;              /* Relay agent IP address. */
+    BYTE chaddr [16];           /* Client hardware address. */
+    char sname[SNAME_LEN];      /* Server name. */
+    char bname[BOOTF_LEN];      /* Boot filename. */
+    BYTE cookie[DHCP_COOKIE_LEN];   /* Magic cookie */
 } DHCPHDR;
 
 #pragma pack()

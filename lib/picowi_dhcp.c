@@ -27,6 +27,7 @@
 #include "picowi_pico.h"
 #include "picowi_ioctl.h"
 #include "picowi_ip.h"
+#include "picowi_net.h"
 #include "picowi_udp.h"
 #include "picowi_dhcp.h"
 

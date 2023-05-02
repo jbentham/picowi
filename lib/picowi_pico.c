@@ -26,7 +26,7 @@
 #include "pico/stdlib.h"
 
 #include "picowi_pico.h"
-#include "picowi_spi.h"
+#include "picowi_wifi.h"
 
 // Initialise hardware
 void io_init(void)
@@ -56,6 +56,18 @@ void io_pull(int pin, int pull)
         gpio_pull_down(pin);
     else
         gpio_disable_pulls(pin);
+}
+
+// Set O/P strength
+void io_strength(int pin, uint32_t strength)
+{
+    gpio_set_drive_strength(pin, strength);
+}
+
+// Set O/P slew rate
+void io_slew(int pin, uint32_t slew)
+{
+    gpio_set_slew_rate(pin, slew);
 }
 
 // Set an O/P pin
@@ -89,7 +101,8 @@ void usdelay(uint32_t usec)
 // Return non-zero if timeout
 int ustimeout(uint32_t *tickp, int usec)
 {
-    uint32_t t=time_us_32(), dt=t-*tickp;
+    uint32_t t = time_us_32();
+    uint32_t dt=t - *tickp;
 
     if (usec == 0 || dt >= usec)
     {

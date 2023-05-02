@@ -24,8 +24,7 @@
 
 /* MAC address */
 #define MACLEN      6           /* Ethernet (MAC) address length */
-#define MAXFRAME    1514        /* Maximum frame size (excl CRC) */
-#define MAXFRAMEC   1518        /* Maximum frame size (incl CRC) */
+#define MAXFRAME    1500        /* Maximum frame size (excl CRC) */
 typedef BYTE MACADDR[MACLEN];
 
 /* Ethernet (DIX) header */

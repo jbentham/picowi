@@ -5,15 +5,46 @@
 .side_set 1
 .wrap_target
 .origin 0
-public stall:               ; Stall here when transfer complete
-    pull            side 0  ; Get byte to transmit from FIFO
-loop1:
-    nop             side 0  ; Idle with clock low
-    in pins, 1      side 0  ; Fetch next Rx bit
-    out pins, 1     side 0  ; Set next Tx bit 
-    nop             side 1  ; Idle high
-    jmp !osre loop1 side 1  ; Loop if data in shift reg
-    push            side 0  ; Save Rx byte in FIFO
-.wrap
+public stall:                   ; Stall here when transfer complete
 
+; Write data to SPI (42 MHz SPI clock, if divisor is set to 1)
+public writer:
+    pull                side 0  ; Get byte to transmit from FIFO
+  wrloop:
+    nop                 side 0  ; Delay (if deleted, SPI clock is 63 MHz)
+    out pins, 1         side 0  ; Set next Tx bit 
+    jmp !osre wrloop    side 1  ; Loop if data in shift reg
+.wrap
+    
+; Read data from SPI (25 MHz SPI clock, if divisor is set to 1)
+public reader:
+    pull                side 0  ; Get byte count from host FIFO
+    out x, 32           side 0  ; Copy into x register
+  byteloop:
+    set y, 7            side 0  ; For each bit in byte..
+  bitloop:
+    nop                 side 1  ; Delay
+    nop                 side 1
+    nop                 side 1
+    in pins, 1          side 0  ; Input SPI data bit
+    jmp y--, bitloop    side 0  ; Loop until byte received
+    push                side 0  ; Put byte in host FIFO
+    jmp x--, byteloop   side 0  ; Loop until all bytes received
+    jmp reader          side 0  ; Loop to start next transfer
+
+; Read data from SPI, if clock is set slower (e.g. 10 MHz for write)
+public slow_reader:
+    pull                side 0
+    out x, 32           side 0
+  byteloop2:
+    set y, 7            side 0
+  bitloop2:
+    nop                 side 0
+    in pins, 1          side 0
+    nop                 side 1
+    jmp y--, bitloop2   side 1
+    push                side 0
+    jmp x--, byteloop2  side 0
+    jmp slow_reader     side 0
+    
 ; EOF

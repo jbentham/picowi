@@ -23,9 +23,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifndef MIN
 #define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
+#ifndef MAX
 #define MAX(a,b) (((a)>(b))?(a):(b))
-
+#endif
 typedef unsigned char   BYTE;
 typedef unsigned short  WORD;
 typedef unsigned int    DWORD;
@@ -51,6 +54,10 @@ typedef unsigned int    DWORD;
 #define DISP_DHCP       0x10000 // DHCP header
 #define DISP_DNS        0x20000 // DNS header
 #define DISP_SOCK       0x40000 // Socket
+#define DISP_TCP        0x80000 // TCP
+#define DISP_TCP_STATE  0x100000 // TCP state
+
+#pragma pack(1)
 
 // Async event parameters, used internally
 typedef struct {
@@ -60,8 +67,11 @@ typedef struct {
     uint16_t link;                      // Link state
     uint32_t join;                      // Joining state
     uint8_t *data;                      // Data block
-    int dlen;
+    int     dlen;
+    int     server_port;                // Port number if server
+    int     sock;                       // Socket number if TCP
 } EVENT_INFO;
+#pragma pack()
 
 void set_display_mode(int mask);
 void display(int mask, const char* fmt, ...);

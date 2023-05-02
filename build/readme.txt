@@ -8,3 +8,6 @@ Then make PicoWi library:
 Then make application, e.g.:
   make blink
 
+To program a Pico using OpenOCD bit-bashed SWD:
+  chmod +x prog
+  ./prog blink

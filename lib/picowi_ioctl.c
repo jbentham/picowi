@@ -25,7 +25,7 @@
 
 #include "picowi_defs.h"
 #include "picowi_pico.h"
-#include "picowi_spi.h"
+#include "picowi_wifi.h"
 #include "picowi_init.h"
 #include "picowi_regs.h"
 #include "picowi_ioctl.h"

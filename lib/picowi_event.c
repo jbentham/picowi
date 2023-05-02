@@ -25,7 +25,7 @@
 
 #include "picowi_defs.h"
 #include "picowi_init.h"
-#include "picowi_spi.h"
+#include "picowi_wifi.h"
 #include "picowi_regs.h"
 #include "picowi_ioctl.h"
 #include "picowi_evtnum.h"
@@ -34,6 +34,7 @@
 #define MAX_HANDLERS    20
 int num_handlers;
 event_handler_t event_handlers[MAX_HANDLERS];
+WORD event_ports[MAX_HANDLERS];
 EVT_STR *current_evts;
 
 uint8_t event_mask[EVENT_MAX / 8];
@@ -64,19 +65,31 @@ int events_enable(const EVT_STR *evtp)
 // Add an event handler to the chain
 bool add_event_handler(event_handler_t fn)
 {
+    return(add_server_event_handler(fn , 0));
+}
+
+// Add a server event handler to the chain (with local port number)
+bool add_server_event_handler(event_handler_t fn, WORD port)
+{
     bool ok = num_handlers < MAX_HANDLERS;
     if (ok)
+    {
+        event_ports[num_handlers] = port;
         event_handlers[num_handlers++] = fn;
-    return(ok);
+    }
+    return (ok);
 }
 
 // Run event handlers, until one returns non-zero
 int event_handle(EVENT_INFO *eip)
 {
-    int ret=0;
+    int i, ret=0;
     
-    for (int i=0; i<num_handlers && !ret; i++)
+    for (i=0; i<num_handlers && !ret; i++)
+    {
+        eip->server_port = event_ports[i];
         ret = event_handlers[i](eip);
+    }
     return(ret);
 }
 
@@ -87,8 +100,9 @@ int event_poll(void)
     IOCTL_MSG *iomp = &ioctl_rxmsg;
     ESCAN_RESULT *erp=(ESCAN_RESULT *)rxdata;
     EVENT_HDR *ehp = &erp->eventh;
-    int ret=0, n=event_read(iomp, rxdata, sizeof(rxdata));
-    
+    int ret = 0, n;
+        
+    n = event_read(iomp, rxdata, sizeof(rxdata));
     if (n > 0)
     {
         eip->chan = iomp->rsp.sdpcm.chan;
@@ -98,6 +112,7 @@ int event_poll(void)
         eip->reason = SWAP32(ehp->reason);
         eip->data = rxdata;
         eip->dlen = n;
+        eip->sock = -1;
         display(DISP_EVENT, "Rx_%s ", sdpcm_chan_str(eip->chan));
         if (eip->chan == SDPCM_CHAN_CTRL)
             display(DISP_EVENT, "\n");

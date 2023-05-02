@@ -1,4 +1,4 @@
-// PicoWi half-duplex SPI definitions, see https://iosoft.blog/picowi
+// PicoWi half-duplex SPI interface, see https://iosoft.blog/picowi
 //
 // Copyright (c) 2022, Jeremy P Bentham
 //
@@ -28,7 +28,7 @@ typedef union
 {
     int32_t  int32;
     uint32_t uint32;
-    uint32_t uint24:24;
+    uint32_t uint24 : 24;
     uint16_t uint16;
     uint8_t  uint8;
     uint8_t  bytes[4];
@@ -39,7 +39,7 @@ typedef union
 #pragma pack(1)
 typedef struct
 {
-    uint32_t len:11, addr:17, func:2, incr:1, wr:1;
+    uint32_t len : 11, addr : 17, func : 2, incr : 1, wr : 1;
 } SPI_MSG_HDR;
 
 // SPI message
@@ -52,17 +52,19 @@ typedef union
 #pragma pack()
 
 int wifi_setup(void);
-int spi_init(void);
-bool wifi_rx_event_wait(int msec, uint8_t evt);
-uint32_t wifi_reg_read(int func, uint32_t addr, int nbytes);
-uint32_t spi_reg_read(int func, uint32_t addr, int nbytes);
-int wifi_reg_write(int func, uint32_t addr, uint32_t val, int nbytes);
-int spi_reg_write(int func, uint32_t addr, uint32_t val, int nbytes);
+int wifi_start(void);
+void wifi_pio_init(void);
 int wifi_data_read(int func, int addr, uint8_t *dp, int nbytes);
 int wifi_data_write(int func, int addr, uint8_t *dp, int nbytes);
-int spi_read(uint8_t *rsp, int nbits);
-void spi_write(uint8_t *data, int nbits);
-char *func_str(int func);
-bool get_irq(void);
+uint32_t wifi_reg_read(int func, uint32_t addr, int nbytes);
+int wifi_reg_write(int func, uint32_t addr, uint32_t val, int nbytes);
+void wifi_spi_read(uint8_t *dp, int nbits);
+void wifi_spi_write(uint8_t *dp, int nbits);
+void wifi_pio_dma_init(void);
+bool wifi_rx_event_wait(int msec, uint8_t evt);
+int wifi_bb_spi_read(uint8_t *data, int nbits);
+void wifi_bb_spi_write(uint8_t *data, int nbits);
+bool wifi_get_irq(void);
+char *wifi_func_str(int func);
 
 // EOF
